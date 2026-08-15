@@ -30,12 +30,6 @@ public:
     void setSelected (const juce::File& file);
     juce::File selected() const { return current; }
 
-    /** The wavs of a folder in the order the row puts them: oldest first, so
-        anything new is at the end. Public because "the first one" has to mean
-        the same thing to whoever opens a batch as it does to the row that draws
-        it — two orderings would disagree about which take is take one. */
-    static juce::Array<juce::File> wavsInOrder (const juce::File& dir);
-
     /** A chip was pressed. */
     std::function<void (const juce::File&)> onSelect;
 

@@ -29,11 +29,15 @@ namespace Look
         the row: a colour that followed the position would change under every
         neighbour that got deleted, which is the thing the row must not do. Blue
         arrived whole — a take — and purple was cut out of one. */
-    inline const juce::Colour chipSource     { 0xff16273f };
-    inline const juce::Colour chipSourceHeld { 0xff233d63 };
-    inline const juce::Colour chipCut        { 0xff2b1c40 };
-    inline const juce::Colour chipCutHeld    { 0xff422a60 };
-    inline const juce::Colour chipEdge       { 0xff39414d };
+    inline const juce::Colour chipSource { 0xff16273f };
+    inline const juce::Colour chipCut    { 0xff2b1c40 };
+    inline const juce::Colour chipEdge   { 0xff39414d };
+
+    /** How much lighter a chip goes while it is being dragged. A number rather
+        than a second pair of colours: the two pairs would have to be kept the
+        same distance apart by eye, with nothing written down saying what that
+        distance was meant to be. */
+    inline constexpr float chipHeldLift = 0.35f;
 
     /** m:ss.mmm. Guards against NaN, which a transport with no file returns. */
     juce::String formatTime (double seconds);

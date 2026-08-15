@@ -26,6 +26,12 @@ private:
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
 
     void askForKey();
+
+    /** Opens one directory panel, rooted where batches are saved, and hands
+        what was picked to `use`. Does nothing while one is already open. */
+    void chooseDirectory (const juce::String& title,
+                          std::function<void (const juce::File&)> use);
+
     void chooseFolder();
     void openLibrary();
 

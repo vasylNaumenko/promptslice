@@ -14,31 +14,8 @@ namespace
         the row is rebuilt from what is left. */
     bool isCut (const juce::File& file)
     {
-        return file.getFileNameWithoutExtension().startsWithIgnoreCase (SliceExporter::cutBaseName);
+        return SliceExporter::isNamed (file, SliceExporter::cutBaseName);
     }
-
-    /** Oldest first, so anything new lands at the **end** of the row and
-        nothing already in it moves. Sorting by name would not do it: takes and
-        cuts are numbered in separate sequences, and alphabetically every "cut"
-        comes before every "take" — so the first cut of a session appeared at
-        the head of the row, in front of the takes it was cut from.
-
-        The name only breaks ties, which a batch can produce: five takes are
-        written in a couple of seconds and the file system stamps them at
-        whatever resolution it keeps. */
-    struct ByArrival
-    {
-        static int compareElements (const juce::File& a, const juce::File& b)
-        {
-            const auto ta = a.getCreationTime();
-            const auto tb = b.getCreationTime();
-
-            if (ta != tb)
-                return ta < tb ? -1 : 1;
-
-            return a.getFileName().compareNatural (b.getFileName());
-        }
-    };
 }
 
 //==============================================================================
@@ -58,8 +35,9 @@ public:
         const auto isCurrent = file == strip.selected();
         const auto cut = isCut (file);
 
-        g.setColour (dragging ? (cut ? Look::chipCutHeld : Look::chipSourceHeld)
-                              : (cut ? Look::chipCut : Look::chipSource));
+        const auto base = cut ? Look::chipCut : Look::chipSource;
+
+        g.setColour (dragging ? base.brighter (Look::chipHeldLift) : base);
         g.fillRoundedRectangle (area, 4.0f);
         g.setColour (isCurrent ? Look::wave : Look::chipEdge);
         g.drawRoundedRectangle (area, 4.0f, isCurrent ? 2.0f : 1.0f);
@@ -213,23 +191,9 @@ void SliceStrip::setSelected (const juce::File& file)
     }
 }
 
-juce::Array<juce::File> SliceStrip::wavsInOrder (const juce::File& dir)
-{
-    juce::Array<juce::File> files;
-
-    if (! dir.isDirectory())
-        return files;
-
-    files = dir.findChildFiles (juce::File::findFiles, false, "*.wav");
-
-    ByArrival order;
-    files.sort (order);
-    return files;
-}
-
 void SliceStrip::rebuild()
 {
-    const auto files = wavsInOrder (folder);
+    const auto files = SliceExporter::wavsInOrder (folder);
 
     // Rebuilding throws away every chip and its hover and press state, so it is
     // worth doing only when the row would actually come out different.

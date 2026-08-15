@@ -86,6 +86,7 @@ juce_add_console_app(SliceTest PRODUCT_NAME "SliceTest")
 
 target_sources(SliceTest PRIVATE
     Tests/SliceTest.cpp
+    Source/Shared/Config.cpp
     Source/Shared/SliceExporter.cpp)
 
 target_include_directories(SliceTest PRIVATE Source/Shared)

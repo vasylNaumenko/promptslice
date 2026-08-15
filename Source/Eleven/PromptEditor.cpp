@@ -2,6 +2,9 @@
 #include "../Shared/Look.h"
 #include "../Shared/SliceExporter.h"
 
+#include <array>
+#include <utility>
+
 namespace
 {
     constexpr int barHeight = 40;
@@ -33,6 +36,17 @@ namespace
         return juce::String (rate / 1000.0, 2).trimCharactersAtEnd ("0").trimCharactersAtEnd (".")
                    + " kHz";
     }
+
+    /** What the model box offers, in the order it offers it. A table rather
+        than arithmetic on the enum's own values: those decide nothing about
+        this row, and a value inserted into the enum would otherwise relabel
+        every entry silently — picking "Sound v2" and storing v3. */
+    const std::array<std::pair<Generator::Model, const char*>, 3> modelChoices
+    {{
+        { Generator::Model::automatic, "Auto" },
+        { Generator::Model::v2,        "Sound v2" },
+        { Generator::Model::v3,        "Sound v3" },
+    }};
 }
 
 PromptEditor::PromptEditor (PromptProcessor& p)
@@ -106,15 +120,20 @@ PromptEditor::PromptEditor (PromptProcessor& p)
     // Auto sends no model at all, which is what the plugin did before there was
     // a choice — so the entry that is not a model has to be first and selected,
     // or opening the window would quietly change what the next prompt asks for.
-    modelBox.addItem ("Auto", (int) Generator::Model::automatic + 1);
-    modelBox.addItem ("Sound v2", (int) Generator::Model::v2 + 1);
-    modelBox.addItem ("Sound v3", (int) Generator::Model::v3 + 1);
-    modelBox.setSelectedId ((int) owner().model() + 1, juce::dontSendNotification);
+    for (int i = 0; i < (int) modelChoices.size(); ++i)
+    {
+        modelBox.addItem (modelChoices[(size_t) i].second, i + 1);
+
+        if (modelChoices[(size_t) i].first == owner().model())
+            modelBox.setSelectedId (i + 1, juce::dontSendNotification);
+    }
+
     modelBox.setTooltip ("Which model answers. Auto leaves the choice to ElevenLabs. "
                          "All three cost the same.");
     modelBox.onChange = [this]
     {
-        owner().setModel ((Generator::Model) (modelBox.getSelectedId() - 1));
+        if (const auto i = modelBox.getSelectedId() - 1; juce::isPositiveAndBelow (i, (int) modelChoices.size()))
+            owner().setModel (modelChoices[(size_t) i].first);
     };
 
     for (int i = 0; i < Generator::sampleRates().size(); ++i)
@@ -215,7 +234,7 @@ PromptEditor::PromptEditor (PromptProcessor& p)
 
     shownAudio = owner().audioFile();
     shownFolder = owner().takesDir();
-    shownLanded = owner().takesLanded();
+    shownLanded = owner().filesLanded();
     strip.setFolder (shownFolder);
     strip.setSelected (shownAudio);
     syncStatus();
@@ -266,41 +285,55 @@ void PromptEditor::askForKey()
         }), false);
 }
 
-void PromptEditor::chooseFolder()
+void PromptEditor::chooseDirectory (const juce::String& title,
+                                    std::function<void (const juce::File&)> use)
 {
-    chooser = std::make_unique<juce::FileChooser> ("Where to keep the takes",
-                                                   owner().settings().downloadDir());
+    // One at a time. The panel is a sheet on its own window rather than modal to
+    // the application, so the buttons behind it can still be pressed -- and
+    // replacing the chooser here would destroy an object JUCE still has a
+    // callback outstanding on.
+    if (chooser != nullptr)
+        return;
+
+    chooser = std::make_unique<juce::FileChooser> (title, owner().settings().downloadDir());
 
     chooser->launchAsync (juce::FileBrowserComponent::openMode
                               | juce::FileBrowserComponent::canSelectDirectories,
-                          [this] (const juce::FileChooser& fc)
+                          [this, use] (const juce::FileChooser& fc)
     {
         const auto dir = fc.getResult();
 
         if (dir != juce::File() && dir.isDirectory())
+            use (dir);
+
+        // Let go on the next message rather than here: this runs from inside
+        // the chooser's own callback, and freeing it under itself is the fault
+        // the guard above exists to prevent.
+        juce::MessageManager::callAsync ([safe = juce::Component::SafePointer<PromptEditor> (this)]
         {
-            owner().settings().setDownloadDir (dir);
-            owner().setStatus ("Folder: " + dir.getFullPathName(), false);
-        }
+            if (safe != nullptr)
+                safe->chooser.reset();
+        });
+    });
+}
+
+void PromptEditor::chooseFolder()
+{
+    chooseDirectory ("Where to keep the takes", [this] (const juce::File& dir)
+    {
+        owner().settings().setDownloadDir (dir);
+        owner().setStatus ("Folder: " + dir.getFullPathName(), false);
     });
 }
 
 void PromptEditor::openLibrary()
 {
-    // Rooted where batches are saved, and browsing folders rather than files:
-    // a batch is a folder, and its name already carries the prompt and the
-    // moment it was made, which is what a person recognises it by.
-    chooser = std::make_unique<juce::FileChooser> ("Open a batch",
-                                                   owner().settings().downloadDir());
-
-    chooser->launchAsync (juce::FileBrowserComponent::openMode
-                              | juce::FileBrowserComponent::canSelectDirectories,
-                          [this] (const juce::FileChooser& fc)
+    // Browsing folders rather than files: a batch is a folder, and its name
+    // already carries the prompt and the moment it was made, which is what a
+    // person recognises it by.
+    chooseDirectory ("Open a batch", [this] (const juce::File& dir)
     {
-        const auto dir = fc.getResult();
-
-        if (dir != juce::File() && dir.isDirectory())
-            owner().loadBatch (dir);
+        owner().loadBatch (dir);
     });
 }
 
@@ -321,7 +354,10 @@ void PromptEditor::syncControls()
     // Model and rate are read from the settings rather than from the note:
     // loadBatch has already put the note's values there, and the settings are
     // what the next Generate will actually use.
-    modelBox.setSelectedId ((int) owner().model() + 1, juce::dontSendNotification);
+    for (int i = 0; i < (int) modelChoices.size(); ++i)
+        if (modelChoices[(size_t) i].first == owner().model())
+            modelBox.setSelectedId (i + 1, juce::dontSendNotification);
+
     rateBox.setSelectedId (Generator::sampleRates().indexOf (owner().outputRate()) + 1,
                            juce::dontSendNotification);
 }
@@ -478,7 +514,7 @@ void PromptEditor::changeListenerCallback (juce::ChangeBroadcaster*)
     if (owner().takesDir() != shownFolder)
     {
         shownFolder = owner().takesDir();
-        shownLanded = owner().takesLanded();
+        shownLanded = owner().filesLanded();
         strip.setFolder (shownFolder);
 
         // The batch changed under the window, which is the one moment the
@@ -487,7 +523,7 @@ void PromptEditor::changeListenerCallback (juce::ChangeBroadcaster*)
         // are the ones it was just given.
         syncControls();
     }
-    else if (owner().takesLanded() != shownLanded)
+    else if (owner().filesLanded() != shownLanded)
     {
         // A take has landed in the folder already on show. Counted rather than
         // gated on "is it still generating": the generator stops being busy in
@@ -497,7 +533,7 @@ void PromptEditor::changeListenerCallback (juce::ChangeBroadcaster*)
         // message -- a marker moving, the status changing -- leaves the count
         // alone, and the editor's own writes and deletes ask for a refresh
         // where they happen.
-        shownLanded = owner().takesLanded();
+        shownLanded = owner().filesLanded();
         strip.refresh();
     }
 

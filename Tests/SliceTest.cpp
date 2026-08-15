@@ -1,5 +1,6 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 
+#include "Config.h"
 #include "SliceExporter.h"
 
 // Checks the one piece of code that writes files a person keeps. Runs on a
@@ -153,6 +154,70 @@ int main()
            "an empty range writes nothing");
     check (SliceExporter::write (formats, source, slices, "bad", 1.5, 0.5) == juce::File(),
            "a reversed range writes nothing");
+
+    std::cout << "naming" << std::endl;
+    check (SliceExporter::isNamed (slices.getChildFile ("tone 01.wav"), "tone"),
+           "a file written under a name is recognised by it");
+    check (SliceExporter::isNamed (slices.getChildFile ("tone.wav"), "tone"),
+           "and so is the bare name");
+    check (! SliceExporter::isNamed (slices.getChildFile ("tonearm loop.wav"), "tone"),
+           "a name that merely starts the same is not");
+
+    std::cout << "order" << std::endl;
+    {
+        const auto ordered = dir.getChildFile ("ordered");
+        ordered.createDirectory();
+
+        // Written oldest first with the alphabet against it: "take" sorts after
+        // "cut", so a listing that came back in this order can only have used
+        // the clock. A whole second apart because that is the resolution the
+        // file system stamps a birth time at.
+        SliceExporter::write (formats, source, ordered, "take 01", 0.0, 0.1);
+        juce::Thread::sleep (1100);
+        SliceExporter::write (formats, source, ordered, "cut 01", 0.2, 0.3);
+
+        const auto files = SliceExporter::wavsInOrder (ordered);
+
+        check (files.size() == 2, "both are listed");
+        check (files.size() == 2
+                   && files[0].getFileNameWithoutExtension() == "take 01"
+                   && files[1].getFileNameWithoutExtension() == "cut 01",
+               "oldest first, so the newer one is at the end even though it sorts first");
+
+        check (SliceExporter::wavsInOrder (dir.getChildFile ("nowhere")).isEmpty(),
+               "a folder that is not there lists nothing");
+    }
+
+    std::cout << "settings" << std::endl;
+    {
+        // Its own name under Application Support, so this cannot touch the
+        // settings of an installed plugin.
+        const juce::String appName { "SliceKitSelfTest" };
+
+        {
+            Config first (appName);
+            first.set ("stale", "left over from a version that read it");
+            first.set ("download_dir", "/tmp/slicekit-test");
+        }
+
+        Config second (appName);
+        check (second.text ("stale").isNotEmpty(), "an undeclared key survives until pruned");
+
+        second.ensure ("declared", 7);
+        second.prune();
+
+        check (second.text ("stale").isEmpty(), "prune drops what was never declared");
+        check ((int) second.get ("declared") == 7, "and keeps what was");
+        check (second.downloadDir().getFullPathName() == "/tmp/slicekit-test",
+               "including the keys the base class declared for itself");
+
+        // Read back from disk rather than from memory: prune has to have
+        // written, or the keys come back on the next launch.
+        Config reread (appName);
+        check (reread.text ("stale").isEmpty(), "and the file on disk agrees");
+
+        second.configFile().getParentDirectory().deleteRecursively();
+    }
 
     dir.deleteRecursively();
 

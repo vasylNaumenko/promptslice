@@ -31,6 +31,16 @@ public:
         not already carry it. */
     void ensure (const juce::String& key, const juce::var& defaultValue);
 
+    /** Drops everything that was not declared. Called by the owner once its own
+        ensure() calls are done, because only the owner knows when that is.
+
+        It is what keeps the promise in the paragraph above true over time: this
+        file outlives the code that wrote it, and a plugin that stops reading a
+        setting would otherwise leave it sitting there looking live. Three keys
+        about downloading video survived in the generator's settings that way,
+        naming tools it has never run. */
+    void prune();
+
     juce::var get (const juce::String& key) const;
     void set (const juce::String& key, const juce::var& value);
 
@@ -53,4 +63,8 @@ public:
 private:
     juce::DynamicObject::Ptr settings;
     juce::String name;
+
+    /** Every key ensure() has been told about, which is the whole of what this
+        plugin reads. */
+    juce::StringArray declared;
 };

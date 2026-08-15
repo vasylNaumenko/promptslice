@@ -34,10 +34,13 @@ public:
     int outputRate() const;
     void setOutputRate (int rate);
 
-    /** How many takes of the current batch have arrived. A count rather than a
-        "still generating" flag: the last take is announced and the batch ends
-        in the same breath, so anything watching a flag misses it. */
-    int takesLanded() const { return landed; }
+    /** How many files the current batch has in it — takes as they arrive, and
+        everything already there when one is opened, cuts included. A count
+        rather than a "still generating" flag: the last take is announced and
+        the batch ends in the same breath, so anything watching a flag misses
+        it. What reads this wants to know that the row changed, not what it
+        changed to. */
+    int filesLanded() const { return landed; }
 
     /** What the batch has cost so far, as the service counted it. */
     int creditsSpent() const { return spent; }

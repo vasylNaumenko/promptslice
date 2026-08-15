@@ -1,5 +1,5 @@
 #include "PromptProcessor.h"
-#include "../Shared/SliceStrip.h"
+#include "../Shared/SliceExporter.h"
 #include "PromptEditor.h"
 
 namespace
@@ -34,6 +34,10 @@ PromptProcessor::PromptProcessor() : SliceProcessor ("PromptSlice")
     config.ensure (apiKeyKey, "");
     config.ensure (modelKey, "");
     config.ensure (lastPromptKey, "");
+
+    // Everything this plugin reads has now been named, so whatever else is in
+    // the file is left over from a version that read it and does not any more.
+    config.prune();
 
     // Where a window with no batch behind it starts from. A project that
     // carries its own batch overwrites this in setStateInformation.
@@ -77,11 +81,16 @@ PromptProcessor::PromptProcessor() : SliceProcessor ("PromptSlice")
 
     maker.onFinished = [this] (bool ok, juce::String message)
     {
-        // Rewritten with what it ended up costing, which is only known now.
-        if (ok)
+        // Rewritten with what it ended up costing, which is only known now, and
+        // written whenever anything landed rather than only on a clean finish:
+        // a batch that produced two takes and then failed still spent the
+        // credits for them, and a note claiming zero would be worse than none.
+        if (landed > 0)
         {
             note.credits = spent;
-            note.writeTo (batchDir);
+
+            if (! note.writeTo (batchDir))
+                message += " The settings could not be written beside the takes.";
         }
 
         setStatus (message, ! ok);
@@ -158,22 +167,15 @@ void PromptProcessor::generate (const juce::String& newPrompt, int count,
     note.promptInfluence = promptInfluence;
     note.model = model();
     note.sampleRate = outputRate();
-    note.created = juce::Time::getCurrentTime().formatted ("%Y-%m-%d %H:%M:%S");
 
     // Remembered on the way out rather than as the field is typed in: what is
     // worth reopening with is what was asked for, not every draft that was
     // half-written and thought better of.
     config.set (lastPromptKey, note.prompt);
 
-    Generator::Request request;
-    request.prompt = note.prompt;
+    auto request = note.asRequest();
     request.apiKey = key;
     request.dir = batchDir;
-    request.count = note.takes;
-    request.durationSeconds = note.lengthSeconds;
-    request.promptInfluence = note.promptInfluence;
-    request.model = note.model;
-    request.sampleRate = note.sampleRate;
 
     setBusy ("Starting...", -1.0);
     maker.start (request);
@@ -181,7 +183,7 @@ void PromptProcessor::generate (const juce::String& newPrompt, int count,
 
 void PromptProcessor::loadBatch (const juce::File& dir)
 {
-    const auto wavs = SliceStrip::wavsInOrder (dir);
+    const auto wavs = SliceExporter::wavsInOrder (dir);
 
     if (wavs.isEmpty())
         return setStatus ("No wavs in " + dir.getFileName(), true);
@@ -209,6 +211,12 @@ void PromptProcessor::loadBatch (const juce::File& dir)
         // has, and it is better than an empty field.
         note = {};
         note.prompt = BatchNote::promptFromFolderName (dir.getFileName());
+
+        // Filled from what is actually in force rather than left on the
+        // struct's defaults: an unread note would otherwise sit there naming a
+        // model and a rate that describe nothing at all.
+        note.model = model();
+        note.sampleRate = outputRate();
     }
 
     // Opening a batch makes its prompt the one being worked on, so a window
@@ -241,7 +249,7 @@ void PromptProcessor::newBatch()
     // the takes still has it, and Library opens that.
     note.prompt.clear();
     note.credits = 0;
-    note.created.clear();
+
     config.set (lastPromptKey, "");
 
     closeAudio();       // clears the waveform, the markers and the selection

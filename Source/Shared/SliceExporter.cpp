@@ -66,6 +66,54 @@ namespace
     }
 }
 
+bool SliceExporter::isNamed (const juce::File& file, const juce::String& baseName)
+{
+    const auto stem = juce::File::createLegalFileName (baseName);
+    const auto name = file.getFileNameWithoutExtension();
+
+    // The whole first word has to be it. A bare prefix test would claim
+    // anything that merely starts with the same letters.
+    return name.equalsIgnoreCase (stem) || name.startsWithIgnoreCase (stem + " ");
+}
+
+juce::Array<juce::File> SliceExporter::wavsInOrder (const juce::File& dir)
+{
+    if (! dir.isDirectory())
+        return {};
+
+    // Each file is stamped once and the sort works on the stamps: asking the
+    // file system inside the comparator costs a stat per comparison, which is
+    // n log n of them for a listing that is redone on every redraw.
+    struct Entry
+    {
+        juce::File file;
+        juce::int64 created = 0;
+
+        static int compareElements (const Entry& a, const Entry& b)
+        {
+            if (a.created != b.created)
+                return a.created < b.created ? -1 : 1;
+
+            return a.file.getFileName().compareNatural (b.file.getFileName());
+        }
+    };
+
+    juce::Array<Entry> entries;
+
+    for (const auto& f : dir.findChildFiles (juce::File::findFiles, false, "*.wav"))
+        entries.add ({ f, f.getCreationTime().toMilliseconds() });
+
+    Entry order;
+    entries.sort (order);
+
+    juce::Array<juce::File> files;
+
+    for (const auto& e : entries)
+        files.add (e.file);
+
+    return files;
+}
+
 int SliceExporter::nextIndexIn (const juce::File& destDir, const juce::String& baseName)
 {
     if (! destDir.isDirectory())
@@ -76,10 +124,10 @@ int SliceExporter::nextIndexIn (const juce::File& destDir, const juce::String& b
 
     for (const auto& f : destDir.findChildFiles (juce::File::findFiles, false, "*.wav"))
     {
-        const auto name = f.getFileNameWithoutExtension();
-
-        if (! name.startsWith (stem))
+        if (! isNamed (f, baseName))
             continue;
+
+        const auto name = f.getFileNameWithoutExtension();
 
         // What follows the stem is " NN" and possibly a " (2)" the old naming
         // left behind; only the first number counts.

@@ -25,7 +25,12 @@ struct BatchNote
 
     /** What the batch cost, as the service counted it. Zero until it finishes. */
     int credits = 0;
-    juce::String created;
+
+    /** The request this note describes. What is not the note's business — the
+        key, and which folder it lands in — is left to the caller, so there is
+        one place that turns settings into a request and no field copied by
+        hand between two structs that mean the same things. */
+    Generator::Request asRequest() const;
 
     static juce::File fileIn (const juce::File& batchDir);
 
@@ -44,5 +49,8 @@ struct BatchNote
         answer: folders made before this existed have none. */
     bool readFrom (const juce::File& batchDir);
 
-    void writeTo (const juce::File& batchDir) const;
+    /** False when it could not be written, which the caller has to say out
+        loud: a batch whose note is missing looks exactly like a batch made
+        before notes existed, and reopens with its folder name for a prompt. */
+    bool writeTo (const juce::File& batchDir) const;
 };

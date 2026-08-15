@@ -37,6 +37,8 @@ Config::Config (const juce::String& appName) : name (appName)
 
 void Config::ensure (const juce::String& key, const juce::var& defaultValue)
 {
+    declared.addIfNotAlreadyThere (key);
+
     // Filling in what the file did not say, so a hand-edited config can carry
     // one key and still be complete.
     if (! settings->hasProperty (key))
@@ -44,6 +46,26 @@ void Config::ensure (const juce::String& key, const juce::var& defaultValue)
         settings->setProperty (key, defaultValue);
         save();
     }
+}
+
+void Config::prune()
+{
+    juce::StringArray dead;
+
+    for (const auto& property : settings->getProperties())
+        if (! declared.contains (property.name.toString()))
+            dead.add (property.name.toString());
+
+    if (dead.isEmpty())
+        return;
+
+    // Gathered first and removed after: removing while walking the same set
+    // skips entries, and a key that survived a prune would come back next time
+    // looking deliberate.
+    for (const auto& key : dead)
+        settings->removeProperty (key);
+
+    save();
 }
 
 juce::var Config::get (const juce::String& key) const

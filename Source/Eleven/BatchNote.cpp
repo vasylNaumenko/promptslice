@@ -92,16 +92,25 @@ bool BatchNote::readFrom (const juce::File& batchDir)
     if (obj->hasProperty ("credits"))
         credits = juce::jmax (0, (int) obj->getProperty ("credits"));
 
-    if (obj->hasProperty ("created"))
-        created = obj->getProperty ("created").toString();
-
     return true;
 }
 
-void BatchNote::writeTo (const juce::File& batchDir) const
+Generator::Request BatchNote::asRequest() const
+{
+    Generator::Request request;
+    request.prompt = prompt;
+    request.count = takes;
+    request.durationSeconds = lengthSeconds;
+    request.promptInfluence = promptInfluence;
+    request.model = model;
+    request.sampleRate = sampleRate;
+    return request;
+}
+
+bool BatchNote::writeTo (const juce::File& batchDir) const
 {
     if (! batchDir.isDirectory())
-        return;
+        return false;
 
     juce::DynamicObject::Ptr obj (new juce::DynamicObject());
 
@@ -115,8 +124,7 @@ void BatchNote::writeTo (const juce::File& batchDir) const
     obj->setProperty ("model", Generator::modelId (model));
     obj->setProperty ("sample_rate", sampleRate);
     obj->setProperty ("credits", credits);
-    obj->setProperty ("created", created);
 
     // Multi-line: this is a file a person is meant to be able to read.
-    fileIn (batchDir).replaceWithText (juce::JSON::toString (juce::var (obj.get()), false));
+    return fileIn (batchDir).replaceWithText (juce::JSON::toString (juce::var (obj.get()), false));
 }
