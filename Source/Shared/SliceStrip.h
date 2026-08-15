@@ -33,6 +33,17 @@ public:
     /** A chip was pressed. */
     std::function<void (const juce::File&)> onSelect;
 
+    /** Whether a file in the row was cut out of another one, which is the only
+        thing the chips' colours say: purple was cut, blue arrived whole.
+
+        Answered by default from the name SliceExporter writes cuts under, which
+        is what PromptSlice needs — takes and cuts share one folder there and
+        the name is all that separates them. It is a question rather than a
+        setting because the other honest answer is not a name at all: YTSlice
+        keeps its slices in a folder of their own, so every file in that row is
+        a cut whatever it is called. */
+    std::function<bool (const juce::File&)> isCut;
+
     void resized() override;
     void paint (juce::Graphics&) override;
 

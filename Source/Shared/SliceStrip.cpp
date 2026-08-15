@@ -8,14 +8,6 @@ namespace
     constexpr int chipGap = 4;
     constexpr int dragStartPixels = 6;
 
-    /** A cut is what SliceExporter wrote under its own name; anything else in
-        the folder arrived whole. Read off the file rather than remembered,
-        because the folder is the truth here — a person may delete from it, and
-        the row is rebuilt from what is left. */
-    bool isCut (const juce::File& file)
-    {
-        return SliceExporter::isNamed (file, SliceExporter::cutBaseName);
-    }
 }
 
 //==============================================================================
@@ -33,8 +25,7 @@ public:
     {
         const auto area = getLocalBounds().toFloat().reduced (1.0f);
         const auto isCurrent = file == strip.selected();
-        const auto cut = isCut (file);
-
+        const auto cut = strip.isCut != nullptr && strip.isCut (file);
         const auto base = cut ? Look::chipCut : Look::chipSource;
 
         g.setColour (dragging ? base.brighter (Look::chipHeldLift) : base);
@@ -151,6 +142,14 @@ private:
 //==============================================================================
 SliceStrip::SliceStrip()
 {
+    // Read off the file rather than remembered, because the folder is the truth
+    // here: a person may delete from it, and the row is rebuilt from what is
+    // left.
+    isCut = [] (const juce::File& file)
+    {
+        return SliceExporter::isNamed (file, SliceExporter::cutBaseName);
+    };
+
     viewport.setViewedComponent (&row, false);
     viewport.setScrollBarsShown (false, true);
     addAndMakeVisible (viewport);
