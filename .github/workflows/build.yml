@@ -58,8 +58,12 @@ jobs:
           path: build/_deps
           key: juce-9.0.1-${{ runner.os }}
 
+      # No -G: naming a generator means naming a Visual Studio version, and the
+      # runner image moves. Pinned to "Visual Studio 17 2022" this failed in a
+      # second with "could not find any instance of Visual Studio" on an image
+      # that had a newer one. CMake picks whichever is installed.
       - name: Configure
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+        run: cmake -B build -A x64
 
       # No install step: COPY_PLUGIN_AFTER_BUILD writes into Common Files, which
       # the runner cannot do unelevated. Building is what is being checked.

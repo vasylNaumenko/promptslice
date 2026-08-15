@@ -79,9 +79,13 @@ is visible however the host was started, Rosetta included. It copies itself into
 ```powershell
 git clone https://github.com/vasylNaumenko/promptslice.git
 cd promptslice
-cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake -B build -A x64
 cmake --build build --config RelWithDebInfo
 ```
+
+CMake picks whichever Visual Studio it finds, so there is no version to keep up
+to date here. Naming one with `-G` is possible and rarely what you want: it
+fails outright on a machine that has a different one.
 
 <details>
 <summary>Two differences from the macOS build, both of them JUCE's doing</summary>
@@ -99,7 +103,7 @@ there yourself (it is a folder, not a file — copy the whole thing), or from an
 elevated prompt let the build do it:
 
 ```powershell
-cmake -B build -G "Visual Studio 17 2022" -A x64 -DPROMPTSLICE_INSTALL_AFTER_BUILD=ON
+cmake -B build -A x64 -DPROMPTSLICE_INSTALL_AFTER_BUILD=ON
 ```
 
 On macOS that switch is on by default, because there the destination is inside
