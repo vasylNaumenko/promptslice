@@ -26,7 +26,11 @@ what something should sound like, get several takes back from
 [ElevenLabs](https://elevenlabs.io), audition them, mark up the one that works,
 cut the piece you want and drag it into your project.
 
-Written against FL Studio 2026, though nothing in it is FL-specific.
+VST3 and AU, so it loads anywhere that takes them — Ableton, Logic, Reaper,
+Bitwig, Cubase, Studio One. It was written and tested in FL Studio 2026, and
+that is the one host where the last step is *proven*: dragging a cut into the
+project is a file drop the host has to accept, and hosts differ. If yours does
+something else, that is worth an issue.
 
 ---
 
@@ -129,8 +133,9 @@ your own home folder.
 
 ## Using it
 
-PromptSlice is an **instrument**, not an effect — in FL Studio it goes in the
-Channel Rack. Type what the sound should be, press **Generate**, and the takes
+PromptSlice is an **instrument**, not an effect: an instrument track in most
+hosts, the Channel Rack in FL Studio. Type what the sound should be, press
+**Generate**, and the takes
 arrive in the row along the bottom. The first one plays while the rest are still
 coming.
 

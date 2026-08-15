@@ -12,7 +12,7 @@ PromptSlice.app        →  anywhere you like
 `C:\Program Files\Common Files\VST3\` and keep the standalone wherever suits.
 
 Then rescan plugins in your DAW. PromptSlice is an **instrument**, not an
-effect — in FL Studio it goes in the Channel Rack.
+effect: an instrument track in most hosts, the Channel Rack in FL Studio.
 
 ---
 
