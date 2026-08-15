@@ -4,10 +4,17 @@
 
 **Describe a sound. Get takes back. Cut what works, drag it in.**
 
+[![Download for macOS](https://img.shields.io/badge/Download-macOS-16273f?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/vasylNaumenko/promptslice/releases/latest)
+[![Download for Windows](https://img.shields.io/badge/Download-Windows-2b1c40?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/vasylNaumenko/promptslice/releases/latest)
+
+<sub>VST3 · AU · standalone — free, and you bring your own
+<a href="https://elevenlabs.io">ElevenLabs</a> key.<br>
+The builds are unsigned: macOS needs
+<a href="#getting-it">one command</a> before it will load them.</sub>
+
 [![Build](https://github.com/vasylNaumenko/promptslice/actions/workflows/build.yml/badge.svg)](https://github.com/vasylNaumenko/promptslice/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/vasylNaumenko/promptslice?color=4c6ef5)](https://github.com/vasylNaumenko/promptslice/releases/latest)
 [![Licence](https://img.shields.io/badge/licence-AGPL--3.0-4c6ef5)](LICENSE)
-[![macOS](https://img.shields.io/badge/macOS-VST3%20%C2%B7%20AU%20%C2%B7%20app-16273f)](#macos)
-[![Windows](https://img.shields.io/badge/Windows-VST3%20%C2%B7%20app-2b1c40)](#windows)
 [![JUCE](https://img.shields.io/badge/JUCE-9.0.1-6b7280)](https://juce.com)
 
 </div>
