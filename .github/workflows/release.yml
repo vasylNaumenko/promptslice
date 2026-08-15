@@ -81,7 +81,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           $built = "build\PromptSlice_artefacts\RelWithDebInfo"
           Copy-Item -Recurse "$built\VST3\PromptSlice.vst3" $stage
-          Copy-Item -Recurse "$built\Standalone\*" $stage
+          Copy-Item "$built\Standalone\PromptSlice.exe" $stage
+          # Named rather than copied wholesale: RelWithDebInfo also leaves a
+          # .pdb of debugging symbols next to the exe, and at 145 MB it was
+          # four fifths of what people downloaded and no use to any of them.
+          Get-ChildItem -Recurse $stage -Include *.pdb,*.ilk,*.exp,*.lib | Remove-Item -Force
           Compress-Archive -Path "$stage" -DestinationPath "dist\PromptSlice-$env:GITHUB_REF_NAME-Windows.zip"
 
       - name: Upload

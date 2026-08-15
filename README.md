@@ -183,8 +183,26 @@ macOS    ~/Library/Application Support/PromptSlice/config.json
 Windows  %APPDATA%\PromptSlice\config.json
 ```
 
-The **API key** lives in that file and nowhere else — never in a project, never
-in this repository. Set it with **Key…**, or put it in `api_key` there.
+### The API key
+
+It lives in that file and nowhere else — never in a project, never in this
+repository. Set it with **Key…**, or put it in `api_key` there. Keys are made at
+[elevenlabs.io/app/developers/api-keys](https://elevenlabs.io/app/developers/api-keys),
+where each one is given the access it is allowed to use.
+
+PromptSlice calls three endpoints and no others, so it needs two things and
+nothing else:
+
+| Access | | What it is for |
+|---|---|---|
+| **Sound generation** | required | `POST /v1/sound-generation`. Without it nothing works at all. |
+| **User Access → Read** | optional | Reading `/v1/user/subscription` for the real balance. Without it the plugin falls back to what the key has spent, and says so. |
+
+Everything else can stay off — **History**, **Models**, **Voices**, **Text to
+Speech**, **Dubbing**, the lot. History is the obvious wrong guess and worth
+naming: it is your library of past generations on the site, and the plugin never
+opens it. Measured rather than assumed — a key with `models_read` and
+`voices_read` refused runs this plugin without noticing.
 
 ### The batch note
 

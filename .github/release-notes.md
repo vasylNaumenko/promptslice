@@ -37,8 +37,24 @@ this repository, which is what the README describes.
 Windows shows its own warning on the standalone for the same reason — unsigned
 code — and the VST3 loads without complaint.
 
-### You need an ElevenLabs key
+### You need an ElevenLabs key of your own
 
 The plugin generates sound through [ElevenLabs](https://elevenlabs.io) and
-spends your credits doing it. Press **Key…** and paste one. It is kept in the
-plugin's own settings file and never written into a project.
+spends **your** credits doing it, not anybody else's. The free tier gives 10 000
+credits a month, which is about a thousand seconds of asked-for length.
+
+Make one at
+[elevenlabs.io/app/developers/api-keys](https://elevenlabs.io/app/developers/api-keys),
+press **Key…** in the plugin and paste it. It is kept in the plugin's own
+settings file and never written into a project.
+
+Two accesses are worth knowing about, because the page offers a long list:
+
+- **Sound generation** — required. Without it nothing works at all.
+- **User Access → Read** — optional, and only so the plugin can show what the
+  account has left. Without it it shows what the key has spent instead, and
+  says which one it is showing.
+
+Everything else can stay off — **History**, Models, Voices, Text to Speech.
+History is the natural wrong guess: it is your library of past generations on
+the site, and the plugin never opens it.
