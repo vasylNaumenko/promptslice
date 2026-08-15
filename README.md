@@ -1,40 +1,58 @@
+<div align="center">
+
 # PromptSlice
 
-An audio plugin that turns a written description into sound you can use.
+**Describe a sound. Get takes back. Cut what works, drag it in.**
 
-Type what something should sound like, get several takes back from
+[![Build](https://github.com/vasylNaumenko/promptslice/actions/workflows/build.yml/badge.svg)](https://github.com/vasylNaumenko/promptslice/actions/workflows/build.yml)
+[![Licence](https://img.shields.io/badge/licence-AGPL--3.0-4c6ef5)](LICENSE)
+[![macOS](https://img.shields.io/badge/macOS-VST3%20%C2%B7%20AU%20%C2%B7%20app-16273f)](#macos)
+[![Windows](https://img.shields.io/badge/Windows-VST3%20%C2%B7%20app-2b1c40)](#windows)
+[![JUCE](https://img.shields.io/badge/JUCE-9.0.1-6b7280)](https://juce.com)
+
+</div>
+
+![The plugin, with a batch of takes in the row along the bottom](docs/screenshot.webp)
+
+An audio plugin that turns a written description into sound you can use. Type
+what something should sound like, get several takes back from
 [ElevenLabs](https://elevenlabs.io), audition them, mark up the one that works,
 cut the piece you want and drag it into your project.
 
-macOS, VST3 and AU, plus a standalone build. Written against FL Studio 2026,
-though nothing in it is FL-specific.
+Written against FL Studio 2026, though nothing in it is FL-specific.
+
+---
 
 ## What it does
 
-- **Several takes at once.** A prompt gives one sound, so asking for five is
-  five requests — and the first plays while the rest are still arriving.
-- **The whole editing bit.** Playhead, markers, a selection, looping, cutting.
-  Cuts land on the nearest zero crossing within 10 ms and the last millisecond
-  fades, so a piece does not click at either end.
-- **Lossless.** Takes are requested as PCM rather than the endpoint's default of
-  128 kbps mp3, which smears exactly the transients a one-shot is made of.
-- **Honest about money.** Every request reports what it cost, and the plugin
-  shows it rather than guessing against a price list.
+|  |  |
+|---|---|
+| **Several takes at once** | A prompt gives one sound, so asking for five is five requests — and the first plays while the rest are still arriving. |
+| **The whole editing bit** | Playhead, markers, a selection, looping, cutting. Cuts land on the nearest zero crossing within 10 ms and the last millisecond fades, so a piece does not click at either end. |
+| **Lossless** | Takes are requested as PCM rather than the endpoint's default of 128 kbps mp3, which smears exactly the transients a one-shot is made of. |
+| **Honest about money** | Every request reports what it cost, and the plugin shows that figure rather than guessing against a price list. |
+| **Nothing is lost** | What each batch was asked for is written beside the sounds it made, and **Library** opens it again — prompt, settings and all. |
 
-## Why dragging, and not an Import button
+### Why dragging, and not an Import button
 
-There isn't one. VST3 gives a plugin no way to create a channel, place a clip,
-or write anything into the host's project — that is not an omission here, it is
-the format. What a plugin *can* do is write a file and let the host accept a drop
-of it, which is how Serato Sample, XO and Portal all do it too. So every piece
-you cut lands in the row at the bottom, and you drag it where you want it.
+There isn't one. VST3 gives a plugin no way to create a channel, place a clip, or
+write anything into the host's project — that is not an omission here, it is the
+format. What a plugin *can* do is write a file and let the host accept a drop of
+it, which is how Serato Sample, XO and Portal all do it too. So every piece you
+cut lands in the row at the bottom, and you drag it where you want it.
 
-## Installing
+---
+
+## Building
 
 Nothing is signed or notarised, so the only supported route is building it.
+You need **CMake 3.22+** and a **C++20 compiler**. JUCE is fetched automatically
+at the version this was tested against — if you already have a checkout, add
+`-DJUCE_PATH=/path/to/JUCE` and save the download.
 
-You need macOS 11 or newer, the Xcode command line tools, CMake 3.22+, and an
-ElevenLabs API key.
+### macOS
+
+<sub>Xcode command line tools · macOS 11 or newer</sub>
 
 ```bash
 git clone https://github.com/vasylNaumenko/promptslice.git
@@ -43,20 +61,87 @@ cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build
 ```
 
-JUCE is fetched automatically at the version this was tested against. If you
-already have a checkout, point at it and save the download:
+Builds VST3, AU and a standalone app, universal (arm64 and x86_64) so the plugin
+is visible however the host was started, Rosetta included. It copies itself into
+`~/Library/Audio/Plug-Ins/`; rescan plugins in your DAW afterwards.
 
-```bash
-cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DJUCE_PATH=/path/to/JUCE
+### Windows
+
+> [!NOTE]
+> **This has never been built on Windows.** Nothing in the plugin is
+> macOS-specific — one settings path was, and is now written for both — but
+> "it should build" is not the same as having built it. The CI workflow runs a
+> Windows job so the answer stops being a guess; if you try it yourself, the
+> result is worth an issue either way.
+
+<sub>Visual Studio 2022 with **Desktop development with C++** · Git</sub>
+
+```powershell
+git clone https://github.com/vasylNaumenko/promptslice.git
+cd promptslice
+cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config RelWithDebInfo
 ```
 
-The build copies the plugin into `~/Library/Audio/Plug-Ins/` itself. Rescan
-plugins in your DAW afterwards.
+<details>
+<summary>Two differences from the macOS build, both of them JUCE's doing</summary>
+
+<br>
+
+**No AU.** Audio Units are an Apple format; JUCE drops that target on any other
+platform. You get VST3 and the standalone.
+
+**It does not install itself.** VST3 plugins go in
+`C:\Program Files\Common Files\VST3`, which an ordinary build cannot write to —
+and the copy is a post-build step, so it would not be skipped, it would fail the
+build. Copy `build\PromptSlice_artefacts\RelWithDebInfo\VST3\PromptSlice.vst3`
+there yourself (it is a folder, not a file — copy the whole thing), or from an
+elevated prompt let the build do it:
+
+```powershell
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DPROMPTSLICE_INSTALL_AFTER_BUILD=ON
+```
+
+On macOS that switch is on by default, because there the destination is inside
+your own home folder.
+
+</details>
+
+---
 
 ## Using it
 
 PromptSlice is an **instrument**, not an effect — in FL Studio it goes in the
-Channel Rack.
+Channel Rack. Type what the sound should be, press **Generate**, and the takes
+arrive in the row along the bottom. The first one plays while the rest are still
+coming.
+
+### The row along the bottom
+
+Everything you can drag into the project is there. A chip carries its file's own
+name rather than a position, so deleting one cannot renumber the rest, and the
+newest is always at the end. The colour says where it came from:
+
+| | |
+|---|---|
+| 🟦 **Blue** | a take, generated from the prompt |
+| 🟪 **Purple** | a cut, taken out of one of them |
+
+Press a chip to hear it, drag it into the project, or press its ✕ to send it to
+the trash.
+
+### New and Library
+
+**New** lets go of the batch you are on: the prompt and the row clear, the
+settings you were working with stay. It touches no files.
+
+**Library** opens a batch you made before — its sounds *and* the settings that
+produced them, read back from the note described below.
+
+<details>
+<summary><b>Mouse and keyboard</b></summary>
+
+<br>
 
 | | |
 |---|---|
@@ -72,19 +157,45 @@ Channel Rack.
 **Cut** slices the stretches between markers — two markers mean one piece.
 Markers win over a selection, and the button says which it will do.
 
-### Where files go
+</details>
 
-Everything lands under the folder in the settings, one subfolder per batch of
-takes, named after the prompt and stamped. Change it with **Folder…**, or edit:
+---
+
+## Settings and files
+
+Everything lands under the folder in the settings, one subfolder per batch, named
+after the prompt and stamped. Change it with **Save to…**, or edit the settings
+file directly:
 
 ```
-~/Library/Application Support/PromptSlice/config.json
+macOS    ~/Library/Application Support/PromptSlice/config.json
+Windows  %APPDATA%\PromptSlice\config.json
 ```
 
-### The API key
+The **API key** lives in that file and nowhere else — never in a project, never
+in this repository. Set it with **Key…**, or put it in `api_key` there.
 
-It lives in that settings file and nowhere else — never in a project, never in
-this repository. Set it with the **Key…** button, or put it in `api_key` there.
+### The batch note
+
+Each batch folder gets a `promptslice.cfg` — plain JSON, meant to be readable,
+saying what that batch was asked for:
+
+```json
+{
+  "prompt": "deep metal impact with a long reverb tail",
+  "takes": 3,
+  "length_seconds": 2.5,
+  "prompt_influence": 0.75,
+  "model": "eleven_text_to_sound_v3",
+  "sample_rate": 48000,
+  "credits": 75
+}
+```
+
+That file is why a folder of wavs stops being anonymous a week later, and it
+travels with the folder if you move or copy it. Edit it by hand if you like —
+what it says is checked on the way back in, and anything it leaves out comes back
+as a default.
 
 ### Quality
 
@@ -96,14 +207,17 @@ this repository. Set it with the **Key…** button, or put it in `api_key` there
 Neither changes the price: the service charges by the second of audio, so the
 rate trades disk space and nothing else.
 
-### Credits
+---
+
+## Credits
 
 Every request comes back saying what it cost, and that figure — the service's
-own, not a guess — is what the status line reports: *"Generated 3 takes for 60
-credits."*
+own, not a guess — is what the status line reports:
 
-Beside it the plugin says what it can about the account, and what that is
-depends on what the key is allowed to read:
+> Generated 3 takes for 60 credits.
+
+Beside it the plugin says what it can about the account, and what that is depends
+on what the key is allowed to read:
 
 | The key can read | It shows |
 |---|---|
@@ -111,15 +225,17 @@ depends on what the key is allowed to read:
 | only its own usage | `1124 credits spent in 30 days` |
 | neither | `balance unavailable`, with the reason in the tooltip |
 
-The middle row is what a key scoped to sound generation gets, and it is worded
-as what it is: **spent is not left**. To get the real balance, turn on the
+The middle row is what a key scoped to sound generation gets, and it is worded as
+what it is: **spent is not left**. To get the real balance, turn on the
 `user_read` permission where the key is made.
 
-One thing worth knowing before you spend: a **Length** of `auto` is charged as a
-flat rate rather than by the second, and for a short sound that is markedly more
-than naming the length. Measured against the live endpoint: half a second asked
-for costs 5 credits, two seconds costs 20 — ten a second — while `auto` came
-back as one second of audio for 50.
+> [!TIP]
+> A **Length** of `auto` is charged as a flat rate rather than by the second, and
+> for a short sound that is markedly more than naming the length. Measured
+> against the live endpoint: half a second asked for costs 5 credits, two seconds
+> costs 20 — ten a second — while `auto` came back as one second of audio for 50.
+
+---
 
 ## Tests
 
@@ -127,18 +243,22 @@ back as one second of audio for 50.
 cmake --build build --target SliceTest && ./build/SliceTest_artefacts/*/SliceTest
 ```
 
-`SliceTest` checks the part that writes files you keep: the zero-crossing snap,
-the fade, the numbering and the refusals, against a synthetic tone. It needs
-nothing external.
+`SliceTest` checks what happens to files you keep — the zero-crossing snap, the
+fade, the numbering, the refusals, the order the row puts them in, and the
+settings prune, which is the only code here that deletes anything. It needs
+nothing external and runs against a synthetic tone.
 
-`GenTest` makes one real request and checks the answer opens as a wav at the
-rate it asked for, that the cost was reported, and that the balance query gives
-either a figure or a reason. It skips when there is no key, so it is safe to run
-in any state:
+`GenTest` covers the batch note the same way, then makes one real request and
+checks the answer opens as a wav at the rate it asked for, that the cost was
+reported, and that the balance query gives either a figure or a reason. The note
+half runs always; the network half skips when there is no key, so it is safe to
+run in any state:
 
 ```bash
 ELEVENLABS_API_KEY=... ./build/GenTest_artefacts/*/GenTest
 ```
+
+---
 
 ## Licence
 
@@ -146,12 +266,12 @@ ELEVENLABS_API_KEY=... ./build/GenTest_artefacts/*/GenTest
 
 This is not a preference: the plugin links the JUCE framework, which is
 [dual-licensed](https://github.com/juce-framework/JUCE/blob/master/LICENSE.md)
-under AGPLv3 or a paid commercial licence. A build made without a commercial
-JUCE licence is a derivative work and can only be distributed under AGPLv3. In
-short — use it for anything you like, but if you distribute a modified version,
-its source has to be available under the same terms.
+under AGPLv3 or a paid commercial licence. A build made without a commercial JUCE
+licence is a derivative work and can only be distributed under AGPLv3. In short —
+use it for anything you like, but if you distribute a modified version, its
+source has to be available under the same terms.
 
-## What it talks to
+### What it talks to
 
 ElevenLabs, with your key, to ask for sounds and to ask what they cost. Nothing
 else leaves the machine: no telemetry, no analytics, no update check.

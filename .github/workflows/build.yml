@@ -42,3 +42,32 @@ jobs:
 
       - name: Validate the Audio Unit
         run: auval -v aumu Prsl Vnau
+
+  # Nobody here has built this on Windows, and the README says so. This job is
+  # what turns that sentence into an answer rather than a hope: it is expected
+  # to pass, and the day it does not, the README is what needs correcting.
+  windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-9.0.1-${{ runner.os }}
+
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      # No install step: COPY_PLUGIN_AFTER_BUILD writes into Common Files, which
+      # the runner cannot do unelevated. Building is what is being checked.
+      - name: Build
+        run: cmake --build build --config RelWithDebInfo
+
+      - name: Slice tests
+        run: ./build/SliceTest_artefacts/RelWithDebInfo/SliceTest.exe
+
+      - name: Batch note tests
+        run: ./build/GenTest_artefacts/RelWithDebInfo/GenTest.exe

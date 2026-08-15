@@ -7,14 +7,6 @@ namespace
     constexpr auto apiKeyKey = "api_key";
     constexpr auto modelKey = "model";
 
-    /** The last prompt that was actually generated from, kept in the plugin's
-        own settings as well as in the batch's note. The note travels with the
-        sounds and answers "what made these"; this answers "what was I working
-        on", which is the question a freshly opened window asks — a new instance
-        has no batch to read a note from and would otherwise start blank every
-        time. */
-    constexpr auto lastPromptKey = "last_prompt";
-
     /** A folder per batch, named after the prompt and stamped, so asking the
         same thing twice does not overwrite the first answer. */
     juce::File batchFolderFor (const juce::File& root, const juce::String& prompt)
@@ -33,15 +25,14 @@ PromptProcessor::PromptProcessor() : SliceProcessor ("PromptSlice")
 {
     config.ensure (apiKeyKey, "");
     config.ensure (modelKey, "");
-    config.ensure (lastPromptKey, "");
 
     // Everything this plugin reads has now been named, so whatever else is in
     // the file is left over from a version that read it and does not any more.
+    // A window with no batch behind it starts with an empty prompt on purpose:
+    // the field's own invitation says what to do with it better than last
+    // week's prompt does, and the prompt that matters is kept beside the sounds
+    // it made rather than in a setting.
     config.prune();
-
-    // Where a window with no batch behind it starts from. A project that
-    // carries its own batch overwrites this in setStateInformation.
-    note.prompt = config.text (lastPromptKey);
 
     // The generator answers to the processor rather than to the window, so
     // closing the editor mid-batch does not throw the takes away.
@@ -168,11 +159,6 @@ void PromptProcessor::generate (const juce::String& newPrompt, int count,
     note.model = model();
     note.sampleRate = outputRate();
 
-    // Remembered on the way out rather than as the field is typed in: what is
-    // worth reopening with is what was asked for, not every draft that was
-    // half-written and thought better of.
-    config.set (lastPromptKey, note.prompt);
-
     auto request = note.asRequest();
     request.apiKey = key;
     request.dir = batchDir;
@@ -219,10 +205,6 @@ void PromptProcessor::loadBatch (const juce::File& dir)
         note.sampleRate = outputRate();
     }
 
-    // Opening a batch makes its prompt the one being worked on, so a window
-    // opened later starts where this left off.
-    config.set (lastPromptKey, note.prompt);
-
     openAudio (batchDir, wavs.getFirst(), note.prompt);
 
     auto text = "Opened " + juce::String (wavs.size())
@@ -243,14 +225,10 @@ void PromptProcessor::newBatch()
     spent = 0;
 
     // The prompt and what the last batch cost go; the settings stay, because
-    // they are what the next one will be made with. Cleared in the settings
-    // file as well, or the next window would bring back exactly the prompt this
-    // button was pressed to be rid of. Nothing is lost by it: the note beside
-    // the takes still has it, and Library opens that.
+    // they are what the next one will be made with. Nothing is lost by it: the
+    // note beside the takes still has the prompt, and Library opens that.
     note.prompt.clear();
     note.credits = 0;
-
-    config.set (lastPromptKey, "");
 
     closeAudio();       // clears the waveform, the markers and the selection
     setStatus ("Type what the sound should be.", false);

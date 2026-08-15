@@ -30,6 +30,20 @@ else()
     FetchContent_MakeAvailable(JUCE)
 endif()
 
+# Copying a built plugin into place needs somewhere writable to copy it to. On
+# macOS that is inside the user's own Library, so it is free. On Windows it is
+# C:\Program Files\Common Files\VST3, which an ordinary build cannot write to --
+# and the copy is a post-build step, so it would not be skipped, it would fail
+# the build. Off by default there; on for anyone building elevated on purpose.
+if(APPLE)
+    set(INSTALL_DEFAULT ON)
+else()
+    set(INSTALL_DEFAULT OFF)
+endif()
+
+option(PROMPTSLICE_INSTALL_AFTER_BUILD
+       "Copy the built plugin into the system plugin folder" ${INSTALL_DEFAULT})
+
 juce_add_plugin(PromptSlice
     PRODUCT_NAME                "PromptSlice"
     COMPANY_NAME                "Vasyl Naumenko"
@@ -44,7 +58,7 @@ juce_add_plugin(PromptSlice
     # The prompt field has to receive keystrokes while the editor sits inside
     # the host's own window, and without this the host eats them.
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
-    COPY_PLUGIN_AFTER_BUILD     TRUE)
+    COPY_PLUGIN_AFTER_BUILD     ${PROMPTSLICE_INSTALL_AFTER_BUILD})
 
 # Everything from "a wav exists" onwards — playing it, marking it, cutting it,
 # dragging the pieces out. Nothing in here knows where the wav came from, which

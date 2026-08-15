@@ -86,10 +86,17 @@ juce::String Config::text (const juce::String& key) const
 
 juce::File Config::configFile() const
 {
-    return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
-               .getChildFile ("Application Support")
-               .getChildFile (name)
-               .getChildFile ("config.json");
+    auto dir = juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory);
+
+   #if JUCE_MAC
+    // On macOS that special location is ~/Library, and settings live one level
+    // in from there. Everywhere else it already is the settings folder --
+    // %APPDATA% on Windows, ~/.config on Linux -- so a segment named after
+    // Apple's layout would be a folder nobody else has a reason to look in.
+    dir = dir.getChildFile ("Application Support");
+   #endif
+
+    return dir.getChildFile (name).getChildFile ("config.json");
 }
 
 void Config::save() const
