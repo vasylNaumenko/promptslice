@@ -1,0 +1,44 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JUCE is a large checkout and the build fetches it, so it is worth
+      # keeping between runs.
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: juce-9.0.1-${{ runner.os }}
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build
+        run: cmake --build build
+
+      # Checks the code that writes the files a person keeps. Needs nothing
+      # external, so it runs on every push.
+      - name: Slice tests
+        run: ./build/SliceTest_artefacts/RelWithDebInfo/SliceTest
+
+      # Skips itself with a reason when the secret is not set, which is the
+      # case on every fork and every pull request from one.
+      - name: Generator test
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        run: ./build/GenTest_artefacts/RelWithDebInfo/GenTest
+
+      - name: Validate the Audio Unit
+        run: auval -v aumu Prsl Vnau

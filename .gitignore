@@ -1,0 +1,9 @@
+build/
+build-*/
+.DS_Store
+.env
+*.key
+
+# Editor and IDE state, which is about the machine rather than the project.
+.idea/
+.vscode/
