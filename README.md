@@ -2,7 +2,7 @@
 
 # PromptSlice
 
-**Describe a sound. Get takes back. Cut what works, drag it in.**
+**The ElevenLabs sound generator, without leaving your DAW.**
 
 [![Download for macOS](https://img.shields.io/badge/Download-macOS-16273f?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/vasylNaumenko/promptslice/releases/latest)
 [![Download for Windows](https://img.shields.io/badge/Download-Windows-2b1c40?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/vasylNaumenko/promptslice/releases/latest)
@@ -21,10 +21,14 @@ The builds are unsigned: macOS needs
 
 ![The plugin, with a batch of takes in the row along the bottom](docs/screenshot.webp)
 
-An audio plugin that turns a written description into sound you can use. Type
-what something should sound like, get several takes back from
-[ElevenLabs](https://elevenlabs.io), audition them, mark up the one that works,
-cut the piece you want and drag it into your project.
+[ElevenLabs](https://elevenlabs.io) makes the sound. PromptSlice is where you
+work with it: ask for a handful of takes from inside the project, hear them
+against the track that is already playing, mark up the one that worked, cut the
+piece you want out of it and drag it onto a channel.
+
+What it removes is the round trip. A browser tab, a download folder, a file
+manager, and all of it again for the next take — for a sound you will keep two
+seconds of.
 
 VST3 and AU, so it loads anywhere that takes them — Ableton, Logic, Reaper,
 Bitwig, Cubase, Studio One. It was written and tested in FL Studio 2026, and
