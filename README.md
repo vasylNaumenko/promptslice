@@ -43,12 +43,26 @@ cut lands in the row at the bottom, and you drag it where you want it.
 
 ---
 
+## Getting it
+
+Built releases are on the [releases page](https://github.com/vasylNaumenko/promptslice/releases)
+— a zip per system, with where to put things and what macOS will say about it.
+
+> [!IMPORTANT]
+> Those builds are **not signed or notarised**, which needs a paid Apple
+> developer account. macOS will refuse to load a downloaded plugin until you
+> clear the quarantine mark by hand; the release notes give the command. If you
+> would rather not take that on trust, build it yourself — it is three lines.
+
 ## Building
 
-Nothing is signed or notarised, so the only supported route is building it.
 You need **CMake 3.22+** and a **C++20 compiler**. JUCE is fetched automatically
 at the version this was tested against — if you already have a checkout, add
 `-DJUCE_PATH=/path/to/JUCE` and save the download.
+
+Both platforms are built on every push by
+[CI](https://github.com/vasylNaumenko/promptslice/actions), so what follows is
+what a machine does, not what somebody remembers doing.
 
 ### macOS
 
@@ -67,14 +81,7 @@ is visible however the host was started, Rosetta included. It copies itself into
 
 ### Windows
 
-> [!NOTE]
-> **This has never been built on Windows.** Nothing in the plugin is
-> macOS-specific — one settings path was, and is now written for both — but
-> "it should build" is not the same as having built it. The CI workflow runs a
-> Windows job so the answer stops being a guess; if you try it yourself, the
-> result is worth an issue either way.
-
-<sub>Visual Studio 2022 with **Desktop development with C++** · Git</sub>
+<sub>Visual Studio 2022 or newer with **Desktop development with C++** · Git</sub>
 
 ```powershell
 git clone https://github.com/vasylNaumenko/promptslice.git

@@ -1,0 +1,92 @@
+name: release
+
+# Cut a release by pushing a tag:
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# The builds are made here rather than on anybody's machine, so what people
+# download is what the tagged source produces and nothing else that happened to
+# be lying around.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  # One job makes the release so the two builds have somewhere to upload to.
+  # Both of them creating it would be a race, and the loser would fail.
+  create:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "PromptSlice $GITHUB_REF_NAME" \
+            --notes-file .github/release-notes.md \
+            --verify-tag
+
+  macos:
+    needs: create
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build build --target PromptSlice_All
+
+      # ditto rather than zip: these are bundles, and it is the tool that knows
+      # how to put one in an archive and get the same thing back out.
+      - name: Package
+        run: |
+          stage="dist/PromptSlice"
+          mkdir -p "$stage"
+          cd build/PromptSlice_artefacts/RelWithDebInfo
+          cp -R VST3/PromptSlice.vst3 "$GITHUB_WORKSPACE/$stage/"
+          cp -R AU/PromptSlice.component "$GITHUB_WORKSPACE/$stage/"
+          cp -R Standalone/PromptSlice.app "$GITHUB_WORKSPACE/$stage/"
+          cd "$GITHUB_WORKSPACE"
+          ditto -c -k --sequesterRsrc --keepParent "$stage" \
+                "dist/PromptSlice-$GITHUB_REF_NAME-macOS.zip"
+
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber
+
+  windows:
+    needs: create
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          cmake -B build -A x64
+          cmake --build build --config RelWithDebInfo --target PromptSlice_All
+
+      - name: Package
+        run: |
+          $stage = "dist\PromptSlice"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          $built = "build\PromptSlice_artefacts\RelWithDebInfo"
+          Copy-Item -Recurse "$built\VST3\PromptSlice.vst3" $stage
+          Copy-Item -Recurse "$built\Standalone\*" $stage
+          Compress-Archive -Path "$stage" -DestinationPath "dist\PromptSlice-$env:GITHUB_REF_NAME-Windows.zip"
+
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $zip = (Get-ChildItem dist\*.zip).FullName
+          gh release upload "$env:GITHUB_REF_NAME" "$zip" --clobber
