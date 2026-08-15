@@ -194,10 +194,15 @@ int main()
         // settings of an installed plugin.
         const juce::String appName { "SliceKitSelfTest" };
 
+        // Somewhere that exists on every platform, so the check below is about
+        // the setting travelling rather than about path syntax.
+        const auto marker = juce::File::getSpecialLocation (juce::File::tempDirectory)
+                                .getChildFile ("slicekit-download-dir");
+
         {
             Config first (appName);
             first.set ("stale", "left over from a version that read it");
-            first.set ("download_dir", "/tmp/slicekit-test");
+            first.setDownloadDir (marker);
         }
 
         Config second (appName);
@@ -208,7 +213,11 @@ int main()
 
         check (second.text ("stale").isEmpty(), "prune drops what was never declared");
         check ((int) second.get ("declared") == 7, "and keeps what was");
-        check (second.downloadDir().getFullPathName() == "/tmp/slicekit-test",
+        // Compared as files rather than as strings. "/tmp/..." is not an
+        // absolute path on Windows, so juce::File resolves it against the
+        // current drive and hands back "C:\tmp\..." -- which is the file
+        // system being reasonable and the assertion being written on a Mac.
+        check (second.downloadDir() == marker,
                "including the keys the base class declared for itself");
 
         // Read back from disk rather than from memory: prune has to have
