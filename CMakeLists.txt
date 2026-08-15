@@ -61,6 +61,7 @@ target_include_directories(PromptSlice PRIVATE Source)
 
 target_sources(PromptSlice PRIVATE
     ${SHARED_SOURCES}
+    Source/Eleven/BatchNote.cpp
     Source/Eleven/Generator.cpp
     Source/Eleven/PromptProcessor.cpp
     Source/Eleven/PromptEditor.cpp)
@@ -107,6 +108,7 @@ juce_add_console_app(GenTest PRODUCT_NAME "GenTest")
 
 target_sources(GenTest PRIVATE
     Tests/GenTest.cpp
+    Source/Eleven/BatchNote.cpp
     Source/Eleven/Generator.cpp)
 
 target_include_directories(GenTest PRIVATE Source/Eleven)

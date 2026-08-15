@@ -61,8 +61,17 @@ PromptEditor::PromptEditor (PromptProcessor& p)
                               influenceSlider.getValue());
     };
 
+    newButton.onClick = [this] { owner().newBatch(); promptField.grabKeyboardFocus(); };
+    newButton.setTooltip ("Let go of this batch and start another. The files stay on disk "
+                          "and Library brings them back.");
+
     keyButton.onClick = [this] { askForKey(); };
+
+    libraryButton.onClick = [this] { openLibrary(); };
+    libraryButton.setTooltip ("Open a batch made earlier, with the settings that made it.");
+
     folderButton.onClick = [this] { chooseFolder(); };
+    folderButton.setTooltip ("Where new batches are saved.");
 
     revealButton.onClick = [this]
     {
@@ -169,7 +178,8 @@ PromptEditor::PromptEditor (PromptProcessor& p)
     sliceButton.onClick  = [this] { cutSlices(); };
     fitButton.onClick    = [this] { wave->zoomToFit(); };
 
-    for (auto* b : { &generateButton, &keyButton, &folderButton, &revealButton,
+    for (auto* b : { &newButton, &generateButton, &keyButton, &libraryButton,
+                     &folderButton, &revealButton,
                      &playButton, &stopButton, &loopButton, &markerButton,
                      &sliceButton, &clearButton, &fitButton })
         addAndMakeVisible (b);
@@ -198,7 +208,9 @@ PromptEditor::PromptEditor (PromptProcessor& p)
     owner().addChangeListener (this);
 
     setResizable (true, true);
-    setResizeLimits (760, 480, 3000, 2000);
+    // Wider than it was: the top row gained New and Library, and below about
+    // this the prompt field is squeezed to nothing by its own buttons.
+    setResizeLimits (860, 480, 3000, 2000);
     setSize (980, 640);
 
     shownAudio = owner().audioFile();
@@ -273,13 +285,55 @@ void PromptEditor::chooseFolder()
     });
 }
 
+void PromptEditor::openLibrary()
+{
+    // Rooted where batches are saved, and browsing folders rather than files:
+    // a batch is a folder, and its name already carries the prompt and the
+    // moment it was made, which is what a person recognises it by.
+    chooser = std::make_unique<juce::FileChooser> ("Open a batch",
+                                                   owner().settings().downloadDir());
+
+    chooser->launchAsync (juce::FileBrowserComponent::openMode
+                              | juce::FileBrowserComponent::canSelectDirectories,
+                          [this] (const juce::FileChooser& fc)
+    {
+        const auto dir = fc.getResult();
+
+        if (dir != juce::File() && dir.isDirectory())
+            owner().loadBatch (dir);
+    });
+}
+
+void PromptEditor::syncControls()
+{
+    const auto& b = owner().batch();
+
+    promptField.setText (b.prompt, juce::dontSendNotification);
+    countSlider.setValue (b.takes, juce::dontSendNotification);
+    influenceSlider.setValue (b.promptInfluence, juce::dontSendNotification);
+
+    // The length's text is written by a function of its own, and setting the
+    // value without a notification does not re-run it — so a reopened batch
+    // would show the right position under the wrong words.
+    durationSlider.setValue (b.lengthSeconds, juce::dontSendNotification);
+    durationSlider.updateText();
+
+    // Model and rate are read from the settings rather than from the note:
+    // loadBatch has already put the note's values there, and the settings are
+    // what the next Generate will actually use.
+    modelBox.setSelectedId ((int) owner().model() + 1, juce::dontSendNotification);
+    rateBox.setSelectedId (Generator::sampleRates().indexOf (owner().outputRate()) + 1,
+                           juce::dontSendNotification);
+}
+
 //==============================================================================
 juce::File PromptEditor::writeCut (double fromSeconds, double toSeconds, int index)
 {
     // Cuts land beside the takes rather than in a folder of their own, so one
     // row holds everything a person can drag into the project.
     return SliceExporter::write (cutFormats, owner().audioFile(), owner().takesDir(),
-                                 "cut " + juce::String (index).paddedLeft ('0', 2),
+                                 SliceExporter::cutBaseName + " "
+                                     + juce::String (index).paddedLeft ('0', 2),
                                  fromSeconds, toSeconds);
 }
 
@@ -289,7 +343,7 @@ void PromptEditor::dragOutRegion()
         return;
 
     const auto file = writeCut (owner().regionStartSeconds(), owner().regionEndSeconds(),
-                                SliceExporter::nextIndexIn (owner().takesDir(), "cut"));
+                                SliceExporter::nextIndexIn (owner().takesDir(), SliceExporter::cutBaseName));
 
     if (file == juce::File())
         return owner().setStatus ("Could not write the cut.", true);
@@ -327,7 +381,7 @@ void PromptEditor::cutSlices()
     if (cuts.isEmpty())
         return owner().setStatus ("Nothing to cut: add markers or select a stretch.", true);
 
-    int index = SliceExporter::nextIndexIn (owner().takesDir(), "cut");
+    int index = SliceExporter::nextIndexIn (owner().takesDir(), SliceExporter::cutBaseName);
     int written = 0;
 
     for (const auto& cut : cuts)
@@ -426,6 +480,12 @@ void PromptEditor::changeListenerCallback (juce::ChangeBroadcaster*)
         shownFolder = owner().takesDir();
         shownLanded = owner().takesLanded();
         strip.setFolder (shownFolder);
+
+        // The batch changed under the window, which is the one moment the
+        // controls may be written to without arguing with the person using
+        // them. Generating lands here too, harmlessly: the values it puts back
+        // are the ones it was just given.
+        syncControls();
     }
     else if (owner().takesLanded() != shownLanded)
     {
@@ -508,10 +568,12 @@ void PromptEditor::resized()
     auto area = getLocalBounds().reduced (gap);
 
     auto top = area.removeFromTop (barHeight);
+    newButton.setBounds (top.removeFromLeft (60).reduced (2));
     generateButton.setBounds (top.removeFromRight (110).reduced (2));
     keyButton.setBounds (top.removeFromRight (90).reduced (2));
     folderButton.setBounds (top.removeFromRight (90).reduced (2));
     revealButton.setBounds (top.removeFromRight (80).reduced (2));
+    libraryButton.setBounds (top.removeFromRight (90).reduced (2));
     promptField.setBounds (top.reduced (2));
 
     area.removeFromTop (gap);

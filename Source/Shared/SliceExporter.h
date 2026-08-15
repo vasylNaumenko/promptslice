@@ -11,6 +11,13 @@
 */
 namespace SliceExporter
 {
+    /** What a cut is called, and therefore what the row recognises as one when
+        it picks a colour. One constant rather than a literal at each end: the
+        name is the only thing telling a cut apart from the audio it came out
+        of, and two copies of it would disagree in silence — the row would
+        simply stop colouring, with nothing to say it had. */
+    inline const juce::String cutBaseName { "cut" };
+
     /** How far either end of a cut may move to land on a zero crossing. A cut
         through the middle of a wave leaves a step, and a step is a click. Ten
         milliseconds is inaudible as a timing change and is more than enough to

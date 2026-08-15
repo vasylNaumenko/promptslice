@@ -27,6 +27,12 @@ private:
 
     void askForKey();
     void chooseFolder();
+    void openLibrary();
+
+    /** Puts the batch's own settings back on the controls. Called only when the
+        batch changes under the window — generating, opening one, starting a new
+        one — so it can never fight a slider somebody is dragging. */
+    void syncControls();
     void cutSlices();
     void dragOutRegion();
     juce::File writeCut (double fromSeconds, double toSeconds, int index);
@@ -37,9 +43,11 @@ private:
     PromptProcessor& owner() const { return static_cast<PromptProcessor&> (processor); }
 
     juce::TextEditor promptField;
+    juce::TextButton newButton { "New" };
     juce::TextButton generateButton { "Generate" };
     juce::TextButton keyButton { "Key..." };
-    juce::TextButton folderButton { "Folder..." };
+    juce::TextButton libraryButton { "Library..." };
+    juce::TextButton folderButton { "Save to..." };
     juce::TextButton revealButton { "Reveal" };
     juce::Label statusLabel;
 

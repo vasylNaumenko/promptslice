@@ -25,9 +25,15 @@ namespace Look
         is the piece that gets cut and the markers are its edges. */
     inline const juce::Colour marker    { 0xffffb03a };
 
-    inline const juce::Colour chip      { 0xff1c2027 };
-    inline const juce::Colour chipHeld  { 0xff2c3440 };
-    inline const juce::Colour chipEdge  { 0xff39414d };
+    /** A chip is coloured by how its file was made, never by where it sits in
+        the row: a colour that followed the position would change under every
+        neighbour that got deleted, which is the thing the row must not do. Blue
+        arrived whole — a take — and purple was cut out of one. */
+    inline const juce::Colour chipSource     { 0xff16273f };
+    inline const juce::Colour chipSourceHeld { 0xff233d63 };
+    inline const juce::Colour chipCut        { 0xff2b1c40 };
+    inline const juce::Colour chipCutHeld    { 0xff422a60 };
+    inline const juce::Colour chipEdge       { 0xff39414d };
 
     /** m:ss.mmm. Guards against NaN, which a transport with no file returns. */
     juce::String formatTime (double seconds);

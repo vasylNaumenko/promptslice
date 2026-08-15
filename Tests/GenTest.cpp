@@ -1,6 +1,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 
+#include "BatchNote.h"
 #include "Generator.h"
 
 // Makes one real request to ElevenLabs and checks that what comes back is a wav
@@ -21,23 +22,116 @@ namespace
 
         std::cout << (ok ? "  ok    " : "  FAIL  ") << what << std::endl;
     }
+
+    /** These go through JSON as text and come back as doubles, so they are
+        compared as measurements rather than as bit patterns -- which is also
+        what the float-equal warning is asking for. */
+    bool near (double a, double b) { return std::abs (a - b) < 1.0e-9; }
 }
 
 int main()
 {
-    const auto key = juce::SystemStats::getEnvironmentVariable ("ELEVENLABS_API_KEY", {}).trim();
-
-    if (key.isEmpty())
-    {
-        std::cout << "SKIP: no ELEVENLABS_API_KEY in the environment" << std::endl;
-        return 0;
-    }
-
     juce::ScopedJuceInitialiser_GUI juceInit;
 
     const auto dir = juce::File::getSpecialLocation (juce::File::tempDirectory)
                          .getChildFile ("promptslice-gen-test");
     dir.deleteRecursively();
+
+    // The note goes first and runs whatever else happens: it needs no key and
+    // no network, and it is the piece that fails quietly -- a field that stops
+    // travelling reopens a batch with somebody else's settings and says
+    // nothing about it.
+    std::cout << "the batch note" << std::endl;
+
+    dir.createDirectory();
+
+    {
+        BatchNote missing;
+        check (! missing.readFrom (dir), "a folder with no note says so");
+    }
+
+    {
+        BatchNote written;
+        written.prompt = "metal door slam";
+        written.takes = 4;
+        written.lengthSeconds = 2.5;
+        written.promptInfluence = 0.75;
+        written.model = Generator::Model::v3;
+        written.sampleRate = 44100;
+        written.credits = 80;
+        written.created = "2026-08-15 09:27:11";
+        written.writeTo (dir);
+
+        BatchNote read;
+        check (read.readFrom (dir), "a note that was written is read back");
+        check (read.prompt == written.prompt, "the prompt survives: " + read.prompt);
+        check (read.takes == 4 && read.credits == 80, "the counts survive");
+        check (near (read.lengthSeconds, written.lengthSeconds)
+                   && near (read.promptInfluence, written.promptInfluence),
+               "the two fractions survive");
+        check (read.model == Generator::Model::v3, "the model survives");
+        check (read.sampleRate == 44100, "the rate survives");
+        check (read.created == written.created, "the moment survives");
+    }
+
+    {
+        // Auto is the empty string on the wire and in the note, which is the
+        // one value that could be mistaken for "no answer" on the way back.
+        BatchNote automatic;
+        automatic.model = Generator::Model::automatic;
+        automatic.writeTo (dir);
+
+        BatchNote read;
+        read.model = Generator::Model::v2;      // so a failure to read shows
+        check (read.readFrom (dir) && read.model == Generator::Model::automatic,
+               "Auto reopens as Auto rather than as a model");
+    }
+
+    {
+        // A note somebody edited by hand, which is the point of it being plain
+        // text beside their samples.
+        BatchNote::fileIn (dir).replaceWithText (R"({"prompt": "half a note",)"
+                                                 R"( "takes": 99, "sample_rate": 12345})");
+
+        BatchNote read;
+        read.credits = 7;                       // must be cleared by the read
+        check (read.readFrom (dir), "a hand-edited note is still a note");
+        check (read.prompt == "half a note", "what it does say is taken");
+        check (read.takes == 5, "a count past the limit is clamped, not obeyed");
+        check (read.sampleRate == 48000, "a rate the endpoint has no name for is refused");
+        check (near (read.promptInfluence, 0.3) && read.credits == 0,
+               "and what it leaves out comes back as the default");
+    }
+
+    {
+        // What a folder made before notes existed has to fall back to.
+        check (BatchNote::promptFromFolderName ("metal door slam 2026-08-15 132933")
+                   == "metal door slam",
+               "a folder name gives its prompt back without the stamp");
+
+        check (BatchNote::promptFromFolderName ("2026 tape loops")
+                   == "2026 tape loops",
+               "a name that only looks numeric is left whole");
+
+        check (BatchNote::promptFromFolderName ("drums 2026-08-15 13293")
+                   == "drums 2026-08-15 13293",
+               "a tail that is nearly a stamp is not one");
+
+        check (BatchNote::promptFromFolderName ("2026-08-15 132933")
+                   == "2026-08-15 132933",
+               "a name that is only a stamp keeps it, rather than becoming nothing");
+    }
+
+    dir.deleteRecursively();
+
+    const auto key = juce::SystemStats::getEnvironmentVariable ("ELEVENLABS_API_KEY", {}).trim();
+
+    if (key.isEmpty())
+    {
+        std::cout << "SKIP the rest: no ELEVENLABS_API_KEY in the environment" << std::endl;
+        std::cout << (failures == 0 ? "ALL PASS" : juce::String (failures) + " FAILED") << std::endl;
+        return failures;
+    }
 
     // Declared before the generator on purpose: the callbacks capture these by
     // reference, and ~Generator runs last, after a request that is still in the

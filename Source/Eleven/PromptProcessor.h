@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Shared/SliceProcessor.h"
+#include "BatchNote.h"
 #include "Generator.h"
 
 /** PromptSlice: type what the sound should be, get several takes, keep the one
@@ -45,10 +46,25 @@ public:
     const Generator::Balance& balance() const { return accountBalance; }
     void refreshBalance();
 
+    /** Opens a batch made earlier: its takes come back in the row and the
+        settings that produced them come back on the controls, out of the note
+        written beside them. */
+    void loadBatch (const juce::File& dir);
+
+    /** Lets go of the current batch — the prompt and the row, not the files,
+        which stay where they are and are reachable through loadBatch. The
+        settings are deliberately left standing: clearing what you are working
+        with is not what "start another one" means. */
+    void newBatch();
+
     /** The folder the current batch of takes is in. Cut pieces go in beside
         them, so one row shows everything a person can drag out. */
     juce::File takesDir() const { return batchDir; }
-    juce::String lastPrompt() const { return prompt; }
+
+    /** What the current batch was asked for. The window reads its controls
+        back from this whenever the batch changes under it. */
+    const BatchNote& batch() const { return note; }
+    juce::String lastPrompt() const { return note.prompt; }
 
     const juce::String getName() const override { return "PromptSlice"; }
     juce::AudioProcessorEditor* createEditor() override;
@@ -59,7 +75,7 @@ public:
 private:
     Generator maker;
     juce::File batchDir;
-    juce::String prompt;
+    BatchNote note;
 
     int landed = 0;
     int spent = 0;
