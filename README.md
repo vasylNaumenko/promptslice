@@ -21,10 +21,10 @@ The builds are unsigned: macOS needs
 
 ![The plugin, with a batch of takes in the row along the bottom](docs/screenshot.webp)
 
-[ElevenLabs](https://elevenlabs.io) makes the sound. PromptSlice is where you
-work with it: ask for a handful of takes from inside the project, hear them
-against the track that is already playing, mark up the one that worked, cut the
-piece you want out of it and drag it onto a channel.
+[ElevenLabs](https://elevenlabs.io) makes the sound effect. PromptSlice is the
+VST3 / AU plugin you work with it in: ask for a handful of takes from inside the
+project, hear them against the track that is already playing, mark up the one
+that worked, cut the piece you want out of it and drag it onto a channel.
 
 What it removes is the round trip. A browser tab, a download folder, a file
 manager, and all of it again for the next take — for a sound you will keep two
